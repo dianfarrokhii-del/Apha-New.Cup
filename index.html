@@ -206,6 +206,7 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
    <div id="regAuthNotice" class="notice"></div>
    <div id="regFormWrap">
     <form onsubmit="registerTournament(event)">
+     <div class="field"><label>نام تیم</label><input id="teamName" required placeholder="مثلاً RYVEN FC"></div>
      <div class="field"><label>نام کاربری بازیکن ۱</label><input id="playerName" required placeholder="مثلاً RYVEN"></div>
      <div class="field"><label>نام هم‌تیمی</label><input id="partnerName" required placeholder="مثلاً KAIRO"></div>
      <div class="field"><label>آیدی تماس</label><input id="contact" required placeholder="@username"></div>
@@ -397,10 +398,12 @@ async function logout(){await db.auth.signOut();showToast("از حساب خار�
 async function registerTournament(e){
  e.preventDefault();
  if(!currentUser){showToast("ابتدا وارد حساب شو");go("account");return}
+ const teamName=document.getElementById("teamName").value.trim();
  const player1=document.getElementById("playerName").value.trim();
  const player2=document.getElementById("partnerName").value.trim();
  const contact=document.getElementById("contact").value.trim();
  const {data:rpcData,error}=await db.rpc("submit_tournament_registration",{
+   p_team_name: teamName,
    p_player1: player1,
    p_player2: player2,
    p_contact: contact
