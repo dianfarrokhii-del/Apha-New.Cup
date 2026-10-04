@@ -127,3 +127,5 @@ using (
 with check (
   exists (select 1 from public.admin_users a where a.user_id = auth.uid())
 );
+
+\n-- Team name support\nalter table public.tournament_registrations add column if not exists team_name text;\n\ndrop function if exists public.submit_tournament_registration(text,text,text);\ncreate or replace function public.submit_tournament_registration(p_team_name text,p_player1 text,p_player2 text,p_contact text) returns json language plpgsql security definer set search_path=public as $$ declare new_id uuid; begin if auth.uid() is null then raise exception 'ابتدا وارد حساب شو'; end if; insert into public.tournament_registrations(user_id,team_name,player1,player2,contact,status) values(auth.uid(),trim(p_team_name),p_player1,p_player2,p_contact,'pending') returning id into new_id; return json_build_object('id',new_id); end; $$;\nrevoke all on function public.submit_tournament_registration(text,text,text,text) from public;\ngrant execute on function public.submit_tournament_registration(text,text,text,text) to authenticated;\n
