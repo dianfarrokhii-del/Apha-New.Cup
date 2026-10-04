@@ -400,8 +400,10 @@ async function registerTournament(e){
  const player1=document.getElementById("playerName").value.trim();
  const player2=document.getElementById("partnerName").value.trim();
  const contact=document.getElementById("contact").value.trim();
- const {error}=await db.from("tournament_registrations").insert({
-   user_id:currentUser.id, player1, player2, contact, status:"pending"
+ const {data:rpcData,error}=await db.rpc("submit_tournament_registration",{
+   p_player1: player1,
+   p_player2: player2,
+   p_contact: contact
  });
  if(error){showToast(error.message);return}
  const box=document.getElementById("regResult");
@@ -419,7 +421,7 @@ async function loadMyRegistration(){
  }
  notice.innerHTML=`✅ وارد شده‌ای با <b>${escapeHtml(currentUser.email)}</b>`;
  wrap.classList.remove("hidden");
- const {data,error}=await db.from("tournament_registrations").select("player1,player2,contact,status,admin_note,created_at").order("created_at",{ascending:false}).limit(1);
+ const {data,error}=await db.rpc("get_my_tournament_registration");
  if(error){box.classList.add("hidden");return}
  if(data?.length){
   const r=data[0]; box.classList.remove("hidden");

@@ -22,3 +22,7 @@
 - هرگز `service_role` یا Secret key را داخل سایت قرار نده.
 - دسترسی Admin با جدول `admin_users` و RLS کنترل می‌شود.
 - اجرای `SUPABASE_MIGRATION.sql` برای جدول اخبار و Policyهای آن ضروری است.
+
+
+## FINAL FIX
+Run `SUPABASE_MIGRATION.sql` once in Supabase SQL Editor. This version uses RPC functions for tournament registration to avoid the PostgREST schema-cache error and includes the Admin news table/policies. The Admin panel supports adding, editing, deleting, and featuring news.
