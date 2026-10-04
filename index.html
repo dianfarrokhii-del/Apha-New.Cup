@@ -184,13 +184,8 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
 <section id="news" class="page">
  <div class="container section">
   <div class="sectionHead"><div><h2>اخبار New.Cup</h2><p>آخرین اتفاقات و اطلاعیه‌ها</p></div></div>
-  <div class="news">
-   <article class="newsMain"><span class="tag">OFFICIAL</span><h3>دوره دوم New.Cup وارد مرحله جدید شد</h3><p>فرمت دو نفره، استودیو و پوشش زنده، چهره تازه‌ای به مسابقات داده‌اند.</p></article>
-   <div class="newsList">
-    <div class="card newsItem"><div class="icon">🏆</div><div><h3>بازگشت جام</h3><p>آماده‌سازی‌های دوره دوم و برنامه پخش مسابقات در حال انجام است.</p></div></div>
-    <div class="card newsItem"><div class="icon">🎙️</div><div><h3>استودیو آماده می‌شود</h3><p>بخش مجری و تحلیل مسابقات به پوشش رسمی New.Cup اضافه شده است.</p></div></div>
-    <div class="card newsItem rumor"><div class="icon">?</div><div><span class="tag">شایعه • تأیید نشده</span><h3>احتمال یک فرمت ویژه</h3><p>شایعه شده ممکن است در یکی از مراحل حساس، یک مسابقه ویژه با قوانین نمایشی برگزار شود؛ هنوز تأیید رسمی نشده.</p></div></div>
-   </div>
+  <div id="publicNews" class="news">
+   <div class="notice">در حال بارگذاری اخبار...</div>
   </div>
  </div>
  <div class="container section">
@@ -254,8 +249,23 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
    </div>
    <div class="sectionHead"><div><h2>👥 ثبت‌نام‌ها</h2><p>درخواست‌های دریافت‌شده از سایت</p></div><button class="btn ghost" onclick="loadAdmin()">↻ بروزرسانی</button></div>
    <div id="adminRegistrations" class="grid" style="grid-template-columns:1fr"></div>
-   <div class="sectionHead" style="margin-top:40px"><div><h2>📺 مدیریت اخبار</h2><p>نسخه اولیه پنل؛ مدیریت محتوای اخبار در مرحله بعد قابل توسعه است.</p></div></div>
-   <div class="card"><p>ساختار پنل اخبار آماده شده و در نسخه بعدی می‌توان افزودن، ویرایش و حذف اخبار را به دیتابیس متصل کرد.</p></div>
+   <div class="sectionHead" style="margin-top:40px"><div><h2>📺 مدیریت اخبار</h2><p>افزودن، ویرایش و حذف اخبار سایت.</p></div><button class="btn ghost" onclick="loadAdminNews()">↻ بروزرسانی</button></div>
+   <div class="card" style="margin-bottom:15px">
+    <h3 id="newsFormTitle">➕ افزودن خبر</h3>
+    <form onsubmit="saveNews(event)">
+     <input type="hidden" id="newsId">
+     <div class="field"><label>عنوان</label><input id="newsTitle" required placeholder="عنوان خبر"></div>
+     <div class="field"><label>متن خبر</label><textarea id="newsContent" required rows="4" placeholder="متن خبر..."></textarea></div>
+     <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>برچسب</label><input id="newsTag" value="OFFICIAL" placeholder="OFFICIAL / RUMOR"></div>
+      <div class="field"><label>آیکن</label><input id="newsIcon" value="📰" maxlength="4" placeholder="📰"></div>
+     </div>
+     <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input id="newsFeatured" type="checkbox"> خبر اصلی باشد</label>
+     <button class="btn primary" type="submit">💾 ذخیره خبر</button>
+     <button class="btn ghost" type="button" onclick="resetNewsForm()">انصراف</button>
+    </form>
+   </div>
+   <div id="adminNews" class="grid" style="grid-template-columns:1fr"></div>
   </div>
  </div>
 </section>
@@ -328,35 +338,59 @@ async function refreshSession(){
 async function authUI(){
  const box=document.getElementById("authBox");
  if(!currentUser){
-  box.innerHTML=`<form onsubmit="login(event)">
-   <div class="field"><label>ایمیل</label><input id="loginEmail" type="email" required placeholder="you@example.com"></div>
-   <div class="field"><label>رمز عبور</label><input id="loginPass" type="password" required></div>
-   <button class="btn primary" type="submit">ورود</button>
-   <button type="button" class="btn ghost" onclick="signup(event)" style="margin-right:8px">ساخت حساب</button>
-  </form>`;
+  box.innerHTML=`
+   <div id="authError" class="notice hidden" style="margin-bottom:12px"></div>
+   <form onsubmit="login(event)">
+    <h3>ورود</h3>
+    <div class="field"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+    <div class="field"><label>رمز عبور</label><input id="loginPass" type="password" autocomplete="current-password" required></div>
+    <button class="btn primary" type="submit">ورود</button>
+    <button type="button" class="btn ghost" onclick="showSignup()" style="margin-right:8px">ساخت حساب جدید</button>
+   </form>
+   <form id="signupForm" class="hidden" onsubmit="signup(event)" style="margin-top:25px;border-top:1px solid var(--line);padding-top:20px">
+    <h3>ساخت حساب</h3>
+    <div class="field"><label>ایمیل</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+    <div class="field"><label>رمز عبور</label><input id="signupPass" type="password" autocomplete="new-password" minlength="6" required placeholder="حداقل ۶ کاراکتر"></div>
+    <div class="field"><label>تکرار رمز عبور</label><input id="signupPass2" type="password" autocomplete="new-password" minlength="6" required></div>
+    <button class="btn primary" type="submit">ساخت حساب</button>
+    <button type="button" class="btn ghost" onclick="hideSignup()" style="margin-right:8px">بازگشت به ورود</button>
+   </form>`;
  }else{
   box.innerHTML=`<div class="userBox"><div>👑 <b>${escapeHtml(currentUser.email)}</b><br><span class="small">حساب Supabase فعال</span></div><button class="btn" onclick="logout()">خروج</button></div>`;
  }
 }
+function showSignup(){
+ document.getElementById("signupForm")?.classList.remove("hidden");
+ document.getElementById("signupForm")?.scrollIntoView({behavior:"smooth",block:"center"});
+}
+function hideSignup(){document.getElementById("signupForm")?.classList.add("hidden");}
+function authError(message){const el=document.getElementById("authError");if(el){el.textContent=message;el.classList.remove("hidden");}showToast(message);}
 async function login(e){
  e.preventDefault();
  const email=document.getElementById("loginEmail").value.trim();
  const password=document.getElementById("loginPass").value;
  const {error}=await db.auth.signInWithPassword({email,password});
- if(error){showToast(error.message);return}
+ if(error){authError(error.message);return}
  showToast("با موفقیت وارد شدی");
  await refreshSession();
 }
 async function signup(e){
  e.preventDefault();
- const email=document.getElementById("loginEmail").value.trim();
- const password=document.getElementById("loginPass").value;
- if(password.length<6){showToast("رمز عبور باید حداقل ۶ کاراکتر باشد");return}
+ const email=document.getElementById("signupEmail").value.trim();
+ const password=document.getElementById("signupPass").value;
+ const password2=document.getElementById("signupPass2").value;
+ if(password.length<6){authError("رمز عبور باید حداقل ۶ کاراکتر باشد");return}
+ if(password!==password2){authError("تکرار رمز عبور با رمز اصلی یکسان نیست");return}
  const {data,error}=await db.auth.signUp({email,password});
- if(error){showToast(error.message);return}
- if(data.session){showToast("حساب ساخته شد و وارد شدی");}
- else{showToast("حساب ساخته شد؛ ایمیل تأیید را بررسی کن");}
- await refreshSession();
+ if(error){authError(error.message);return}
+ if(data?.session){
+   showToast("حساب ساخته شد و وارد شدی ✅");
+   await refreshSession();
+ }else{
+   showToast("حساب ساخته شد. ایمیل تأیید را بررسی کن 📧");
+   document.getElementById("authError").textContent="حساب ساخته شد. اگر تأیید ایمیل فعال باشد، لینک تأیید برایت ارسال شده است. بعد از تأیید دوباره وارد شو.";
+   document.getElementById("authError").classList.remove("hidden");
+ }
 }
 async function logout(){await db.auth.signOut();showToast("از حساب خارج شدی");await refreshSession();go("home");}
 
@@ -411,6 +445,7 @@ async function loadAdmin(){
  const {data:admin}=await db.from("admin_users").select("user_id").eq("user_id",currentUser.id).maybeSingle();
  if(!admin){gate.textContent="⛔ این حساب دسترسی Admin ندارد.";return}
  gate.classList.add("hidden");content.classList.remove("hidden");
+ loadAdminNews();
  const {data,error}=await db.from("tournament_registrations").select("*").order("created_at",{ascending:false});
  if(error){document.getElementById("adminRegistrations").innerHTML=`<div class="notice">خطا: ${escapeHtml(error.message)}</div>`;return}
  const rows=data||[];
@@ -447,7 +482,52 @@ async function saveNote(id){
  showToast("یادداشت ذخیره شد");await loadAdmin();
 }
 
+async function loadNews(){
+ const wrap=document.getElementById("publicNews");
+ if(!wrap)return;
+ const {data,error}=await db.from("news").select("*").order("is_featured",{ascending:false}).order("created_at",{ascending:false});
+ if(error){
+   wrap.innerHTML='<div class="notice">اخبار فعلاً در دسترس نیست. اگر migration اخبار را اجرا نکرده‌ای، آن را در Supabase اجرا کن.</div>';
+   return;
+ }
+ const rows=data||[];
+ if(!rows.length){wrap.innerHTML='<div class="notice">هنوز خبری منتشر نشده.</div>';return}
+ const featured=rows.find(x=>x.is_featured)||rows[0];
+ const rest=rows.filter(x=>x.id!==featured.id);
+ wrap.innerHTML=`<article class="newsMain"><span class="tag">${escapeHtml(featured.tag||"OFFICIAL")}</span><h3>${escapeHtml(featured.title)}</h3><p>${escapeHtml(featured.content)}</p></article><div class="newsList">${rest.map(x=>`<div class="card newsItem ${String(x.tag||'').toLowerCase().includes('rumor')?'rumor':''}"><div class="icon">${escapeHtml(x.icon||'📰')}</div><div><span class="tag">${escapeHtml(x.tag||'NEWS')}</span><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.content)}</p></div></div>`).join("")}</div>`;
+}
+async function loadAdminNews(){
+ const wrap=document.getElementById("adminNews");
+ if(!wrap)return;
+ const {data,error}=await db.from("news").select("*").order("created_at",{ascending:false});
+ if(error){wrap.innerHTML=`<div class="notice">خطا: ${escapeHtml(error.message)}</div>`;return}
+ const rows=data||[];
+ wrap.innerHTML=rows.length?rows.map(x=>`<div class="card adminReg"><div><span class="tag">${escapeHtml(x.tag||'NEWS')}${x.is_featured?' • اصلی':''}</span><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.content)}</p><p class="small">${new Date(x.created_at).toLocaleString('fa-IR')}</p></div><div class="adminActions"><button class="btn primary" onclick="editNews('${x.id}')">✏️ ویرایش</button><button class="btn" onclick="deleteNews('${x.id}')">🗑️ حذف</button></div></div>`).join(""):'<div class="notice">هنوز خبری ثبت نشده.</div>';
+}
+async function saveNews(e){
+ e.preventDefault();
+ const id=document.getElementById("newsId").value;
+ const payload={title:document.getElementById("newsTitle").value.trim(),content:document.getElementById("newsContent").value.trim(),tag:document.getElementById("newsTag").value.trim()||"OFFICIAL",icon:document.getElementById("newsIcon").value.trim()||"📰",is_featured:document.getElementById("newsFeatured").checked,updated_at:new Date().toISOString()};
+ const result=id?await db.from("news").update(payload).eq("id",id):await db.from("news").insert(payload);
+ if(result.error){showToast(result.error.message);return}
+ showToast(id?"خبر ویرایش شد ✅":"خبر اضافه شد ✅");
+ resetNewsForm();await loadAdminNews();await loadNews();
+}
+async function editNews(id){
+ const {data,error}=await db.from("news").select("*").eq("id",id).single();
+ if(error){showToast(error.message);return}
+ document.getElementById("newsId").value=data.id;document.getElementById("newsTitle").value=data.title;document.getElementById("newsContent").value=data.content;document.getElementById("newsTag").value=data.tag||"OFFICIAL";document.getElementById("newsIcon").value=data.icon||"📰";document.getElementById("newsFeatured").checked=!!data.is_featured;document.getElementById("newsFormTitle").textContent="✏️ ویرایش خبر";document.getElementById("newsTitle").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function resetNewsForm(){document.getElementById("newsId").value="";document.getElementById("newsTitle").value="";document.getElementById("newsContent").value="";document.getElementById("newsTag").value="OFFICIAL";document.getElementById("newsIcon").value="📰";document.getElementById("newsFeatured").checked=false;document.getElementById("newsFormTitle").textContent="➕ افزودن خبر";}
+async function deleteNews(id){
+ if(!confirm("این خبر حذف شود؟"))return;
+ const {error}=await db.from("news").delete().eq("id",id);
+ if(error){showToast(error.message);return}
+ showToast("خبر حذف شد");await loadAdminNews();await loadNews();
+}
+
 applyLang();
+loadNews();
 db.auth.onAuthStateChange(async()=>{setTimeout(refreshSession,0)});
 refreshSession();
 </script>
