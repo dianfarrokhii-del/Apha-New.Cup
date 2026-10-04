@@ -90,14 +90,15 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
 .rumor .tag{color:#e7a69a;border-color:rgba(184,90,76,.4);background:rgba(184,90,76,.08)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;place-items:center;z-index:50;padding:20px}
 .modal.show{display:grid}.modalBox{width:min(500px,100%);background:#0d0d0d;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 25px 100px #000}
-.toast{position:fixed;bottom:20px;left:20px;z-index:80;background:#111;border:1px solid var(--line);padding:13px 17px;border-radius:12px;display:none}.toast.show{display:block}
+.adminReg{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.adminActions{display:flex;gap:8px;flex-wrap:wrap}.accepted{border-color:rgba(76,175,120,.45)}.rejected{border-color:rgba(184,90,76,.45)}.pending{border-color:var(--line)}.adminNote{width:100%;margin-top:10px;background:#0b0b0b;color:#fff;border:1px solid var(--line);padding:10px;border-radius:10px}.toast{position:fixed;bottom:20px;left:20px;z-index:80;background:#111;border:1px solid var(--line);padding:13px 17px;border-radius:12px;display:none}.toast.show{display:block}
 @media(max-width:850px){
  .nav{height:64px}.navlinks{display:none}.mobileMenu{display:block;margin-right:auto}
  .hero{grid-template-columns:1fr;padding-top:48px}.heroLogo{order:-1}.heroLogo img{width:280px}
- .grid,.history,.stats,.news,.settingsGrid{grid-template-columns:1fr}
+ .grid,.history,.stats,.news,.settingsGrid{grid-template-columns:1fr}.adminReg{grid-template-columns:1fr}
  .footerGrid{flex-direction:column;align-items:flex-start}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header class="topbar">
@@ -109,6 +110,8 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
       <button data-page="news" onclick="go('news')" data-i18n="news">اخبار</button>
       <button data-page="register" onclick="go('register')" data-i18n="register">ثبت‌نام بازی</button>
       <button data-page="support" onclick="go('support')" data-i18n="support">پشتیبانی</button>
+      <button data-page="account" onclick="go('account')" data-i18n="account">حساب</button>
+      <button id="adminNav" data-page="admin" onclick="go('admin')" class="hidden">🛡️ Admin</button>
     </nav>
     <button class="langbtn" onclick="toggleLang()">EN</button>
     <button class="btn ghost mobileMenu" onclick="openMenu()">☰</button>
@@ -204,15 +207,18 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
  <div class="container section">
   <div class="form">
    <h2>ثبت‌نام در New.Cup</h2>
-   <p class="small">برای ثبت‌نام رسمی مسابقات، می‌توانی از فرم سایت استفاده کنی یا مستقیماً از طریق روبیکا پیام بدهی.</p>
-   <div class="notice">روبیکا رسمی: <b>@dianfarroki</b></div>
-   <form onsubmit="registerTournament(event)">
-    <div class="field"><label>نام کاربری</label><input id="playerName" required placeholder="مثلاً RYVEN"></div>
-    <div class="field"><label>نام هم‌تیمی</label><input id="partnerName" required placeholder="مثلاً KAIRO"></div>
-    <div class="field"><label>آیدی تماس</label><input id="contact" required placeholder="@username"></div>
-    <button class="btn primary" type="submit">ارسال درخواست ثبت‌نام</button>
-   </form>
+   <p class="small">برای ثبت درخواست رسمی، ابتدا با حساب خودت وارد شو.</p>
+   <div id="regAuthNotice" class="notice"></div>
+   <div id="regFormWrap">
+    <form onsubmit="registerTournament(event)">
+     <div class="field"><label>نام کاربری بازیکن ۱</label><input id="playerName" required placeholder="مثلاً RYVEN"></div>
+     <div class="field"><label>نام هم‌تیمی</label><input id="partnerName" required placeholder="مثلاً KAIRO"></div>
+     <div class="field"><label>آیدی تماس</label><input id="contact" required placeholder="@username"></div>
+     <button class="btn primary" type="submit">ارسال درخواست ثبت‌نام</button>
+    </form>
+   </div>
    <div id="regResult" class="notice hidden" style="margin-top:15px"></div>
+   <div id="myRegStatus" class="card hidden" style="margin-top:15px"></div>
    <a class="btn ghost" style="display:inline-block;margin-top:12px" href="https://rubika.ir/dianfarroki" target="_blank" rel="noopener">مراجعه به روبیکا</a>
   </div>
  </div>
@@ -229,12 +235,30 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
 <section id="account" class="page">
  <div class="container section">
   <div class="form">
-   <h2 id="authTitle">ورود به حساب</h2>
+   <h2>حساب New.Cup</h2>
    <div id="authBox"></div>
   </div>
  </div>
 </section>
 
+<section id="admin" class="page">
+ <div class="container section">
+  <div class="sectionHead"><div><h2>🛡️ NEW.CUP — ADMIN PANEL</h2><p>مدیریت ثبت‌نام‌ها و اخبار</p></div><div id="adminState" class="status"></div></div>
+  <div id="adminGate" class="notice">در حال بررسی دسترسی...</div>
+  <div id="adminContent" class="hidden">
+   <div class="stats" style="margin-bottom:20px">
+    <div class="stat"><b id="statTotal">0</b><span>کل درخواست‌ها</span></div>
+    <div class="stat"><b id="statPending">0</b><span>در انتظار</span></div>
+    <div class="stat"><b id="statAccepted">0</b><span>تأییدشده</span></div>
+    <div class="stat"><b id="statRejected">0</b><span>ردشده</span></div>
+   </div>
+   <div class="sectionHead"><div><h2>👥 ثبت‌نام‌ها</h2><p>درخواست‌های دریافت‌شده از سایت</p></div><button class="btn ghost" onclick="loadAdmin()">↻ بروزرسانی</button></div>
+   <div id="adminRegistrations" class="grid" style="grid-template-columns:1fr"></div>
+   <div class="sectionHead" style="margin-top:40px"><div><h2>📺 مدیریت اخبار</h2><p>نسخه اولیه پنل؛ مدیریت محتوای اخبار در مرحله بعد قابل توسعه است.</p></div></div>
+   <div class="card"><p>ساختار پنل اخبار آماده شده و در نسخه بعدی می‌توان افزودن، ویرایش و حذف اخبار را به دیتابیس متصل کرد.</p></div>
+  </div>
+ </div>
+</section>
 <section id="settings" class="page">
  <div class="container section">
   <div class="sectionHead"><div><h2>تنظیمات</h2><p>شخصی‌سازی سایت</p></div></div>
@@ -256,11 +280,17 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
 <div id="toast" class="toast"></div>
 
 <script>
+const SUPABASE_URL="https://slxbvkjnwccoiuspusut.supabase.co";
+const SUPABASE_KEY="sb_publishable_PBklwkMJwT7MP56JOV8jnw_JoJZU2yA";
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+
 const I18N={
-fa:{home:"خانه",history:"تاریخچه",news:"اخبار",register:"ثبت‌نام بازی",support:"پشتیبانی"},
-en:{home:"Home",history:"History",news:"News",register:"Register",support:"Support"}
+fa:{home:"خانه",history:"تاریخچه",news:"اخبار",register:"ثبت‌نام بازی",support:"پشتیبانی",account:"حساب"},
+en:{home:"Home",history:"History",news:"News",register:"Register",support:"Support",account:"Account"}
 };
 let lang=localStorage.getItem("nc_lang")||"fa";
+let currentUser=null;
 
 function applyLang(){
  document.documentElement.lang=lang;
@@ -271,9 +301,12 @@ function applyLang(){
 }
 function toggleLang(){lang=lang==="fa"?"en":"fa";applyLang();showToast(lang==="fa"?"زبان فارسی فعال شد":"English enabled");}
 function go(id){
+ if(id==="admin" && !currentUser){showToast("ابتدا وارد حساب شو");id="account";}
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  const p=document.getElementById(id)||document.getElementById("home");p.classList.add("active");
  document.querySelectorAll(".navlinks button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+ if(id==="admin") loadAdmin();
+ if(id==="register") loadMyRegistration();
  window.scrollTo({top:0,behavior:"smooth"});
 }
 function openMenu(){
@@ -283,39 +316,140 @@ function openMenu(){
  nav.style.background="#0b0b0b";nav.style.padding="10px";nav.style.border="1px solid var(--line)";nav.style.borderRadius="14px";
 }
 function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600)}
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 
-function registerTournament(e){
- e.preventDefault();
- const req={player:playerName.value,partner:partnerName.value,contact:contact.value,date:new Date().toLocaleString()};
- const arr=JSON.parse(localStorage.getItem("nc_registrations")||"[]");arr.push(req);localStorage.setItem("nc_registrations",JSON.stringify(arr));
- const box=document.getElementById("regResult");box.classList.remove("hidden");
- box.innerHTML="✅ درخواست ثبت شد. برای تأیید نهایی، اطلاعاتت را از طریق روبیکا <b>@dianfarroki</b> پیگیری کن.";
- e.target.reset();showToast("درخواست ثبت‌نام ذخیره شد");
+async function refreshSession(){
+ const {data}=await db.auth.getSession();
+ currentUser=data.session?.user||null;
+ await authUI();
+ await updateAdminVisibility();
+ await updateRegistrationUI();
 }
-
-function authUI(){
- const user=localStorage.getItem("nc_user");
+async function authUI(){
  const box=document.getElementById("authBox");
- if(user){
-  box.innerHTML=`<div class="userBox"><div>👑 <b>${escapeHtml(user)}</b><br><span class="small">Logged in</span></div><button class="btn" onclick="logout()">خروج</button></div>`;
- }else{
+ if(!currentUser){
   box.innerHTML=`<form onsubmit="login(event)">
-   <div class="field"><label>نام کاربری</label><input id="loginUser" required></div>
+   <div class="field"><label>ایمیل</label><input id="loginEmail" type="email" required placeholder="you@example.com"></div>
    <div class="field"><label>رمز عبور</label><input id="loginPass" type="password" required></div>
    <button class="btn primary" type="submit">ورود</button>
-   <button type="button" class="btn ghost" onclick="createAccount()" style="margin-right:8px">ساخت حساب</button>
+   <button type="button" class="btn ghost" onclick="signup(event)" style="margin-right:8px">ساخت حساب</button>
   </form>`;
+ }else{
+  box.innerHTML=`<div class="userBox"><div>👑 <b>${escapeHtml(currentUser.email)}</b><br><span class="small">حساب Supabase فعال</span></div><button class="btn" onclick="logout()">خروج</button></div>`;
  }
 }
-function login(e){e.preventDefault();const u=document.getElementById("loginUser").value.trim();localStorage.setItem("nc_user",u);authUI();showToast("خوش آمدی "+u)}
-function createAccount(){
- const u=prompt("نام کاربری را وارد کن:");
- if(!u)return;localStorage.setItem("nc_user",u.trim());authUI();showToast("حساب محلی ساخته شد");
+async function login(e){
+ e.preventDefault();
+ const email=document.getElementById("loginEmail").value.trim();
+ const password=document.getElementById("loginPass").value;
+ const {error}=await db.auth.signInWithPassword({email,password});
+ if(error){showToast(error.message);return}
+ showToast("با موفقیت وارد شدی");
+ await refreshSession();
 }
-function logout(){localStorage.removeItem("nc_user");authUI();showToast("از حساب خارج شدی")}
-function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+async function signup(e){
+ e.preventDefault();
+ const email=document.getElementById("loginEmail").value.trim();
+ const password=document.getElementById("loginPass").value;
+ if(password.length<6){showToast("رمز عبور باید حداقل ۶ کاراکتر باشد");return}
+ const {data,error}=await db.auth.signUp({email,password});
+ if(error){showToast(error.message);return}
+ if(data.session){showToast("حساب ساخته شد و وارد شدی");}
+ else{showToast("حساب ساخته شد؛ ایمیل تأیید را بررسی کن");}
+ await refreshSession();
+}
+async function logout(){await db.auth.signOut();showToast("از حساب خارج شدی");await refreshSession();go("home");}
 
-applyLang();authUI();
+async function registerTournament(e){
+ e.preventDefault();
+ if(!currentUser){showToast("ابتدا وارد حساب شو");go("account");return}
+ const player1=document.getElementById("playerName").value.trim();
+ const player2=document.getElementById("partnerName").value.trim();
+ const contact=document.getElementById("contact").value.trim();
+ const {error}=await db.from("tournament_registrations").insert({
+   user_id:currentUser.id, player1, player2, contact, status:"pending"
+ });
+ if(error){showToast(error.message);return}
+ const box=document.getElementById("regResult");
+ box.classList.remove("hidden");
+ box.innerHTML="✅ درخواست ثبت شد و مستقیماً برای تیم مدیریت New.Cup ارسال شد.";
+ e.target.reset();showToast("درخواست ثبت‌نام ارسال شد");
+ await loadMyRegistration();
+}
+async function loadMyRegistration(){
+ const wrap=document.getElementById("regFormWrap"), notice=document.getElementById("regAuthNotice"), box=document.getElementById("myRegStatus");
+ if(!wrap)return;
+ if(!currentUser){
+  notice.innerHTML="🔐 برای ثبت‌نام باید وارد حساب Supabase خودت باشی.";
+  wrap.classList.add("hidden"); box.classList.add("hidden"); return;
+ }
+ notice.innerHTML=`✅ وارد شده‌ای با <b>${escapeHtml(currentUser.email)}</b>`;
+ wrap.classList.remove("hidden");
+ const {data,error}=await db.from("tournament_registrations").select("player1,player2,contact,status,admin_note,created_at").order("created_at",{ascending:false}).limit(1);
+ if(error){box.classList.add("hidden");return}
+ if(data?.length){
+  const r=data[0]; box.classList.remove("hidden");
+  const label={pending:"در انتظار بررسی ⏳",accepted:"تأیید شد ✅",rejected:"رد شد ❌"}[r.status]||r.status;
+  box.innerHTML=`<span class="tag">وضعیت درخواست</span><h3>${escapeHtml(label)}</h3><p>تیم: <b>${escapeHtml(r.player1)}</b> + <b>${escapeHtml(r.player2)}</b></p>${r.admin_note?`<p>یادداشت ادمین: ${escapeHtml(r.admin_note)}</p>`:""}`;
+ }else box.classList.add("hidden");
+}
+async function updateRegistrationUI(){await loadMyRegistration();}
+
+async function updateAdminVisibility(){
+ const nav=document.getElementById("adminNav");
+ if(!nav)return;
+ nav.classList.add("hidden");
+ if(!currentUser)return;
+ const {data}=await db.from("admin_users").select("user_id").eq("user_id",currentUser.id).maybeSingle();
+ if(data)nav.classList.remove("hidden");
+}
+async function loadAdmin(){
+ const gate=document.getElementById("adminGate"), content=document.getElementById("adminContent");
+ gate.textContent="در حال بررسی دسترسی...";
+ content.classList.add("hidden");
+ if(!currentUser){gate.textContent="🔒 برای ورود به پنل باید وارد حساب شوی.";return}
+ const {data:admin}=await db.from("admin_users").select("user_id").eq("user_id",currentUser.id).maybeSingle();
+ if(!admin){gate.textContent="⛔ این حساب دسترسی Admin ندارد.";return}
+ gate.classList.add("hidden");content.classList.remove("hidden");
+ const {data,error}=await db.from("tournament_registrations").select("*").order("created_at",{ascending:false});
+ if(error){document.getElementById("adminRegistrations").innerHTML=`<div class="notice">خطا: ${escapeHtml(error.message)}</div>`;return}
+ const rows=data||[];
+ document.getElementById("statTotal").textContent=rows.length;
+ document.getElementById("statPending").textContent=rows.filter(x=>x.status==="pending").length;
+ document.getElementById("statAccepted").textContent=rows.filter(x=>x.status==="accepted").length;
+ document.getElementById("statRejected").textContent=rows.filter(x=>x.status==="rejected").length;
+ const list=document.getElementById("adminRegistrations");
+ if(!rows.length){list.innerHTML='<div class="notice">هنوز هیچ ثبت‌نامی دریافت نشده.</div>';return}
+ list.innerHTML=rows.map(r=>`<div class="card adminReg ${escapeHtml(r.status)}">
+  <div>
+   <span class="tag">${escapeHtml(r.status)}</span>
+   <h3>${escapeHtml(r.player1)} + ${escapeHtml(r.player2)}</h3>
+   <p>📞 ${escapeHtml(r.contact)}</p>
+   <p class="small">تاریخ: ${new Date(r.created_at).toLocaleString("fa-IR")}</p>
+   <input class="adminNote" id="note-${r.id}" value="${escapeHtml(r.admin_note||"")}" placeholder="یادداشت ادمین">
+  </div>
+  <div class="adminActions">
+   <button class="btn primary" onclick="setRegistration('${r.id}','accepted')">✅ تأیید</button>
+   <button class="btn" onclick="setRegistration('${r.id}','rejected')">❌ رد</button>
+   <button class="btn ghost" onclick="saveNote('${r.id}')">💾 یادداشت</button>
+  </div>
+ </div>`).join("");
+}
+async function setRegistration(id,status){
+ const {error}=await db.from("tournament_registrations").update({status}).eq("id",id);
+ if(error){showToast(error.message);return}
+ showToast(status==="accepted"?"تیم تأیید شد":"تیم رد شد");await loadAdmin();
+}
+async function saveNote(id){
+ const note=document.getElementById("note-"+id).value;
+ const {error}=await db.from("tournament_registrations").update({admin_note:note}).eq("id",id);
+ if(error){showToast(error.message);return}
+ showToast("یادداشت ذخیره شد");await loadAdmin();
+}
+
+applyLang();
+db.auth.onAuthStateChange(async()=>{setTimeout(refreshSession,0)});
+refreshSession();
 </script>
 </body>
 </html>
