@@ -206,7 +206,6 @@ linear-gradient(180deg,transparent,rgba(0,0,0,.88)),url('logo.jpg') center/cover
    <div id="regAuthNotice" class="notice"></div>
    <div id="regFormWrap">
     <form onsubmit="registerTournament(event)">
-     <div class="field"><label>نام تیم</label><input id="teamName" required maxlength="40" placeholder="مثلاً RYVEN FC"></div>
      <div class="field"><label>نام کاربری بازیکن ۱</label><input id="playerName" required placeholder="مثلاً RYVEN"></div>
      <div class="field"><label>نام هم‌تیمی</label><input id="partnerName" required placeholder="مثلاً KAIRO"></div>
      <div class="field"><label>آیدی تماس</label><input id="contact" required placeholder="@username"></div>
@@ -401,10 +400,7 @@ async function registerTournament(e){
  const player1=document.getElementById("playerName").value.trim();
  const player2=document.getElementById("partnerName").value.trim();
  const contact=document.getElementById("contact").value.trim();
- const teamName=(document.getElementById("teamName")?.value||"").trim();
- if(!teamName){showToast("نام تیم را وارد کنید");return}
  const {data:rpcData,error}=await db.rpc("submit_tournament_registration",{
-   p_team_name: teamName,
    p_player1: player1,
    p_player2: player2,
    p_contact: contact
@@ -430,7 +426,7 @@ async function loadMyRegistration(){
  if(data?.length){
   const r=data[0]; box.classList.remove("hidden");
   const label={pending:"در انتظار بررسی ⏳",accepted:"تأیید شد ✅",rejected:"رد شد ❌"}[r.status]||r.status;
-  box.innerHTML=`<span class="tag">وضعیت درخواست</span><h3>${escapeHtml(label)}</h3><p>🏆 نام تیم: <b>${escapeHtml(r.team_name||"بدون نام")}</b></p><p>بازیکنان: <b>${escapeHtml(r.player1)}</b> + <b>${escapeHtml(r.player2)}</b></p>${r.admin_note?`<p>یادداشت ادمین: ${escapeHtml(r.admin_note)}</p>`:""}`;
+  box.innerHTML=`<span class="tag">وضعیت درخواست</span><h3>${escapeHtml(label)}</h3><p>نام تیم: <b>${escapeHtml(r.team_name || "بدون نام تیم")}</b></p><p>بازیکنان: <b>${escapeHtml(r.player1)}</b> + <b>${escapeHtml(r.player2)}</b></p>${r.admin_note?`<p>یادداشت ادمین: ${escapeHtml(r.admin_note)}</p>`:""}`;
  }else box.classList.add("hidden");
 }
 async function updateRegistrationUI(){await loadMyRegistration();}
@@ -464,7 +460,8 @@ async function loadAdmin(){
  list.innerHTML=rows.map(r=>`<div class="card adminReg ${escapeHtml(r.status)}">
   <div>
    <span class="tag">${escapeHtml(r.status)}</span>
-   <h3>🏆 ${escapeHtml(r.team_name||"بدون نام تیم")}</h3><p>👥 ${escapeHtml(r.player1)} + ${escapeHtml(r.player2)}</p>
+   <h3>🏆 ${escapeHtml(r.team_name || "بدون نام تیم")}</h3>
+   <p>👥 ${escapeHtml(r.player1)} + ${escapeHtml(r.player2)}</p>
    <p>📞 ${escapeHtml(r.contact)}</p>
    <p class="small">تاریخ: ${new Date(r.created_at).toLocaleString("fa-IR")}</p>
    <input class="adminNote" id="note-${r.id}" value="${escapeHtml(r.admin_note||"")}" placeholder="یادداشت ادمین">
